@@ -68,6 +68,9 @@ function doPost(e) {
     if (action === 'addLog') {
       return jsonResponse(addLog(data.payload));
     }
+    if (action === 'updateLogPhoto') {
+      return jsonResponse(updateLogPhoto(data.payload));
+    }
     
     // 功能 B: CRUD 管理 (設備)
     if (action === 'addEquipment') {
@@ -119,8 +122,8 @@ function addLog(payload) {
     id,
     payload.equipmentName || '',
     payload.category || '',
-    payload.vendor || '',
-    payload.phone || '',
+    payload.vendorName || '',
+    payload.vendorPhone || '',
     payload.itemName || '',
     payload.cost || 0,
     payload.timeSpent || 0,
@@ -241,4 +244,31 @@ function deleteRow(sheetName, id) {
 function jsonResponse(data) {
   return ContentService.createTextOutput(JSON.stringify(data))
     .setMimeType(ContentService.MimeType.JSON);
+}
+
+/**
+ * 更新單筆紀錄照片
+ */
+function updateLogPhoto(payload) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName('Logs');
+  var data = sheet.getDataRange().getValues();
+  
+  var id = payload.id;
+  var photoType = payload.photoType; // 'before' or 'after'
+  var base64String = payload.base64String;
+  
+  var url = saveImageToDrive(base64String, photoType + "_" + id + "_" + new Date().getTime());
+  
+  for (var i = 1; i < data.length; i++) {
+    if (data[i][0] === id) {
+      if (photoType === 'before') {
+        sheet.getRange(i + 1, 10).setValue(url); // J欄
+      } else if (photoType === 'after') {
+        sheet.getRange(i + 1, 11).setValue(url); // K欄
+      }
+      return { success: true, url: url };
+    }
+  }
+  return { success: false, error: 'ID not found' };
 }

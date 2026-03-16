@@ -114,7 +114,7 @@ export const api = {
           items: Array.isArray(data.items) ? data.items.map((d: any) => ({ id: d['ID'], name: d['名稱'], category: d['類別'] || '定期維護' })) : [],
           history: Array.isArray(data.history) ? data.history.map((d: any) => ({
             id: d['ID'],
-            equipmentId: '', 
+            equipmentId: d['設備ID'] || '', 
             equipmentName: d['設備名稱'],
             category: d['類別'],
             itemId: '',
@@ -124,6 +124,8 @@ export const api = {
             notes: d['備註'],
             beforePhotoUrl: convertDriveUrl(d['維修前照片URL']),
             afterPhotoUrl: convertDriveUrl(d['維修後照片URL']),
+            vendorName: d['廠商名稱'] || '',
+            vendorPhone: d['廠商電話'] || '',
           })).reverse() : []
         };
       }
@@ -223,7 +225,7 @@ export const api = {
       if (data && Array.isArray(data)) {
         return data.map((d: any) => ({
           id: d['ID'],
-          equipmentId: '', 
+          equipmentId: d['設備ID'] || '', 
           equipmentName: d['設備名稱'],
           category: d['類別'],
           itemId: '',
@@ -233,6 +235,8 @@ export const api = {
           notes: d['備註'],
           beforePhotoUrl: convertDriveUrl(d['維修前照片URL']),
           afterPhotoUrl: convertDriveUrl(d['維修後照片URL']),
+          vendorName: d['廠商名稱'] || '',
+          vendorPhone: d['廠商電話'] || '',
         })).reverse();
       }
     }
@@ -258,8 +262,26 @@ export const api = {
       notes: payload.notes,
       beforePhotoUrl: payload.beforePhotoBase64,
       afterPhotoUrl: payload.afterPhotoBase64,
+      vendorName: payload.vendorName,
+      vendorPhone: payload.vendorPhone,
     };
     historyList.unshift(newRecord);
+  },
+
+  updateLogPhoto: async (payload: { id: string; photoType: 'before' | 'after'; base64String: string }): Promise<void> => {
+    if (GAS_URL) {
+      await fetchPost('updateLogPhoto', payload);
+      return;
+    }
+    await delay(800);
+    const record = historyList.find(r => r.id === payload.id);
+    if (record) {
+      if (payload.photoType === 'before') {
+        record.beforePhotoUrl = payload.base64String;
+      } else {
+        record.afterPhotoUrl = payload.base64String;
+      }
+    }
   }
 };
 

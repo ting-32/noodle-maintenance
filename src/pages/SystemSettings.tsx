@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { api } from '../services/api';
-import { Plus, Edit2, Trash2, X, Check, Settings } from 'lucide-react';
+import { Plus, Edit2, Trash2, X, Check, Settings, MoreVertical } from 'lucide-react';
 import { useData } from '../contexts/DataContext';
 import toast from 'react-hot-toast';
 
@@ -45,6 +45,7 @@ function EquipmentManager() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [configuringId, setConfiguringId] = useState<string | null>(null);
   const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
+  const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
 
   const handleAdd = () => {
     if (!newName.trim()) return;
@@ -130,54 +131,37 @@ function EquipmentManager() {
 
   return (
     <div className="space-y-3">
-      {isAdding ? (
-        <div className="bg-zinc-900 p-3 rounded-xl border border-zinc-800 flex items-center gap-2">
-          <input
-            type="text"
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-            placeholder="輸入新設備名稱"
-            className="flex-1 w-full bg-zinc-950 border border-zinc-800 rounded-lg px-4 h-[60px] text-zinc-100 focus:outline-none focus:border-amber-500"
-            autoFocus
-          />
-          <button onClick={handleAdd} className="w-[60px] h-[60px] flex-none flex items-center justify-center bg-amber-500 text-zinc-950 rounded-lg font-bold">
-            <Check size={24} />
-          </button>
-          <button onClick={() => setIsAdding(false)} className="w-[60px] h-[60px] flex-none flex items-center justify-center bg-zinc-800 text-zinc-300 rounded-lg">
-            <X size={24} />
-          </button>
-        </div>
-      ) : (
-        <button
-          onClick={() => setIsAdding(true)}
-          className="w-full h-[60px] flex items-center justify-center gap-2 border-2 border-dashed border-zinc-700 rounded-xl text-zinc-400 hover:text-amber-500 hover:border-amber-500 transition-colors"
-        >
-          <Plus size={20} />
-          <span className="font-bold">新增設備</span>
-        </button>
-      )}
+      <button
+        onClick={() => {
+          setNewName('');
+          setIsAdding(true);
+        }}
+        className="w-full h-[60px] flex items-center justify-center gap-2 border-2 border-dashed border-zinc-700 rounded-xl text-zinc-400 hover:text-amber-500 hover:border-amber-500 transition-colors"
+      >
+        <Plus size={20} />
+        <span className="font-bold">新增設備</span>
+      </button>
 
       {equipment.map(eq => (
         <div key={eq.id} className="bg-zinc-900 p-3 rounded-xl border border-zinc-800 flex items-center gap-3">
-          {editingId === eq.id ? (
-            <>
-              <input
-                type="text"
-                value={editName}
-                onChange={(e) => setEditName(e.target.value)}
-                className="flex-1 w-full bg-zinc-950 border border-zinc-800 rounded-lg px-4 h-[60px] text-zinc-100 focus:outline-none focus:border-amber-500"
-                autoFocus
-              />
-              <button onClick={() => handleUpdate(eq.id)} className="w-[60px] h-[60px] flex-none flex items-center justify-center bg-amber-500 text-zinc-950 rounded-lg">
-                <Check size={24} />
+          <div className="flex-1 px-2 font-medium text-lg truncate">{eq.name}</div>
+          {deletingId === eq.id ? (
+            <div className="flex gap-2">
+              <button
+                onClick={() => handleDelete(eq.id)}
+                className="w-[60px] h-[60px] flex-none flex items-center justify-center text-white bg-red-600 rounded-lg font-bold text-sm"
+              >
+                刪除
               </button>
-              <button onClick={() => setEditingId(null)} className="w-[60px] h-[60px] flex-none flex items-center justify-center bg-zinc-800 text-zinc-300 rounded-lg">
-                <X size={24} />
+              <button
+                onClick={() => setDeletingId(null)}
+                className="w-[60px] h-[60px] flex-none flex items-center justify-center text-zinc-300 bg-zinc-800 rounded-lg font-bold text-sm"
+              >
+                取消
               </button>
-            </>
+            </div>
           ) : (
             <>
-              <div className="flex-1 px-2 font-medium text-lg truncate">{eq.name}</div>
               <button
                 onClick={() => {
                   setConfiguringId(eq.id);
@@ -188,34 +172,11 @@ function EquipmentManager() {
                 <Settings size={20} />
               </button>
               <button
-                onClick={() => { setEditingId(eq.id); setEditName(eq.name); }}
+                onClick={() => setActiveMenuId(eq.id)}
                 className="w-[60px] h-[60px] flex-none flex items-center justify-center text-zinc-400 hover:text-amber-500 bg-zinc-950 rounded-lg"
               >
-                <Edit2 size={20} />
+                <MoreVertical size={20} />
               </button>
-              {deletingId === eq.id ? (
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => handleDelete(eq.id)}
-                    className="w-[60px] h-[60px] flex-none flex items-center justify-center text-white bg-red-600 rounded-lg font-bold text-sm"
-                  >
-                    刪除
-                  </button>
-                  <button
-                    onClick={() => setDeletingId(null)}
-                    className="w-[60px] h-[60px] flex-none flex items-center justify-center text-zinc-300 bg-zinc-800 rounded-lg font-bold text-sm"
-                  >
-                    取消
-                  </button>
-                </div>
-              ) : (
-                <button
-                  onClick={() => setDeletingId(eq.id)}
-                  className="w-[60px] h-[60px] flex-none flex items-center justify-center text-zinc-400 hover:text-red-500 bg-zinc-950 rounded-lg"
-                >
-                  <Trash2 size={20} />
-                </button>
-              )}
             </>
           )}
         </div>
@@ -274,6 +235,109 @@ function EquipmentManager() {
           </div>
         </div>
       )}
+
+      {/* 底部抽屜 (Bottom Sheet) */}
+      {activeMenuId && (
+        <div 
+          className="fixed inset-0 bg-black/60 z-50 flex flex-col justify-end"
+          onClick={() => setActiveMenuId(null)}
+        >
+          <div 
+            className="bg-zinc-900 w-full rounded-t-2xl p-4 pb-8 animate-in slide-in-from-bottom-full duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="w-12 h-1.5 bg-zinc-700 rounded-full mx-auto mb-6" />
+            <div className="space-y-3">
+              <button
+                onClick={() => {
+                  setEditingId(activeMenuId);
+                  setEditName(equipment.find(e => e.id === activeMenuId)?.name || '');
+                  setActiveMenuId(null);
+                }}
+                className="w-full h-[60px] flex items-center gap-3 px-4 bg-zinc-800/50 hover:bg-zinc-800 rounded-xl text-zinc-200 transition-colors"
+              >
+                <Edit2 size={20} className="text-amber-500" />
+                <span className="font-bold text-lg">編輯設備名稱</span>
+              </button>
+              <button
+                onClick={() => {
+                  setDeletingId(activeMenuId);
+                  setActiveMenuId(null);
+                }}
+                className="w-full h-[60px] flex items-center gap-3 px-4 bg-red-500/10 hover:bg-red-500/20 rounded-xl text-red-500 transition-colors"
+              >
+                <Trash2 size={20} />
+                <span className="font-bold text-lg">刪除設備</span>
+              </button>
+              <button
+                onClick={() => setActiveMenuId(null)}
+                className="w-full h-[60px] flex items-center justify-center bg-zinc-800 rounded-xl text-zinc-300 font-bold text-lg mt-4"
+              >
+                取消
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 設備表單抽屜 (Bottom Sheet) */}
+      {(isAdding || editingId) && (
+        <div 
+          className="fixed inset-0 bg-black/60 z-50 flex flex-col justify-end"
+          onClick={() => {
+            setIsAdding(false);
+            setEditingId(null);
+          }}
+        >
+          <div 
+            className="bg-zinc-900 w-full rounded-t-2xl p-5 animate-in slide-in-from-bottom-full duration-200 max-h-[90vh] overflow-y-auto flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="w-12 h-1.5 bg-zinc-700 rounded-full mx-auto mb-6 flex-none" />
+            <h3 className="text-xl font-bold text-zinc-100 mb-6">
+              {isAdding ? '新增設備' : '編輯設備'}
+            </h3>
+            
+            <div className="space-y-4 flex-1">
+              <div>
+                <label className="block text-sm font-medium text-zinc-400 mb-2">設備名稱</label>
+                <input
+                  type="text"
+                  value={isAdding ? newName : editName}
+                  onChange={(e) => isAdding ? setNewName(e.target.value) : setEditName(e.target.value)}
+                  placeholder="輸入設備名稱"
+                  className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 h-[60px] text-lg text-zinc-100 focus:outline-none focus:border-amber-500"
+                  autoFocus
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-8 flex-none">
+              <button
+                onClick={() => {
+                  setIsAdding(false);
+                  setEditingId(null);
+                }}
+                className="flex-1 h-[60px] bg-zinc-800 text-zinc-300 rounded-xl font-bold text-lg transition-colors hover:bg-zinc-700"
+              >
+                取消
+              </button>
+              <button
+                onClick={() => {
+                  if (isAdding) {
+                    handleAdd();
+                  } else if (editingId) {
+                    handleUpdate(editingId);
+                  }
+                }}
+                className="flex-1 h-[60px] bg-amber-500 text-zinc-950 rounded-xl font-bold text-lg transition-colors hover:bg-amber-400"
+              >
+                確認{isAdding ? '新增' : '儲存'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -287,6 +351,7 @@ function ItemManager() {
   const [newName, setNewName] = useState('');
   const [newItemCategory, setNewItemCategory] = useState('定期維護');
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
 
   const handleAdd = () => {
     if (!newName.trim()) return;
@@ -351,43 +416,17 @@ function ItemManager() {
 
   return (
     <div className="space-y-3">
-      {isAdding ? (
-        <div className="bg-zinc-900 p-3 rounded-xl border border-zinc-800 flex flex-col gap-2">
-          <select
-            value={newItemCategory}
-            onChange={(e) => setNewItemCategory(e.target.value)}
-            className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-4 h-[60px] text-zinc-100 focus:outline-none focus:border-amber-500 appearance-none"
-          >
-            <option value="定期維護">定期維護</option>
-            <option value="設備維修">設備維修</option>
-            <option value="更新配件">更新配件</option>
-          </select>
-          <div className="flex items-center gap-2">
-            <input
-              type="text"
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-              placeholder="輸入新項目名稱"
-              className="flex-1 w-full bg-zinc-950 border border-zinc-800 rounded-lg px-4 h-[60px] text-zinc-100 focus:outline-none focus:border-amber-500"
-              autoFocus
-            />
-            <button onClick={handleAdd} className="w-[60px] h-[60px] flex-none flex items-center justify-center bg-amber-500 text-zinc-950 rounded-lg font-bold">
-              <Check size={24} />
-            </button>
-            <button onClick={() => setIsAdding(false)} className="w-[60px] h-[60px] flex-none flex items-center justify-center bg-zinc-800 text-zinc-300 rounded-lg">
-              <X size={24} />
-            </button>
-          </div>
-        </div>
-      ) : (
-        <button
-          onClick={() => setIsAdding(true)}
-          className="w-full h-[60px] flex items-center justify-center gap-2 border-2 border-dashed border-zinc-700 rounded-xl text-zinc-400 hover:text-amber-500 hover:border-amber-500 transition-colors"
-        >
-          <Plus size={20} />
-          <span className="font-bold">新增項目</span>
-        </button>
-      )}
+      <button
+        onClick={() => {
+          setNewName('');
+          setNewItemCategory('定期維護');
+          setIsAdding(true);
+        }}
+        className="w-full h-[60px] flex items-center justify-center gap-2 border-2 border-dashed border-zinc-700 rounded-xl text-zinc-400 hover:text-amber-500 hover:border-amber-500 transition-colors"
+      >
+        <Plus size={20} />
+        <span className="font-bold">新增項目</span>
+      </button>
 
       {['定期維護', '設備維修', '更新配件'].map(cat => {
         const catItems = items.filter(item => item.category === cat);
@@ -399,73 +438,157 @@ function ItemManager() {
             <div className="space-y-3">
               {catItems.map(item => (
                 <div key={item.id} className="bg-zinc-900 p-3 rounded-xl border border-zinc-800 flex flex-col gap-3">
-                  {editingId === item.id ? (
-                    <>
-                      <select
-                        value={editCategory}
-                        onChange={(e) => setEditCategory(e.target.value)}
-                        className="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-4 h-[60px] text-zinc-100 focus:outline-none focus:border-amber-500 appearance-none"
-                      >
-                        <option value="定期維護">定期維護</option>
-                        <option value="設備維修">設備維修</option>
-                        <option value="更新配件">更新配件</option>
-                      </select>
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="text"
-                          value={editName}
-                          onChange={(e) => setEditName(e.target.value)}
-                          className="flex-1 w-full bg-zinc-950 border border-zinc-800 rounded-lg px-4 h-[60px] text-zinc-100 focus:outline-none focus:border-amber-500"
-                          autoFocus
-                        />
-                        <button onClick={() => handleUpdate(item.id)} className="w-[60px] h-[60px] flex-none flex items-center justify-center bg-amber-500 text-zinc-950 rounded-lg">
-                          <Check size={24} />
+                  <div className="flex items-center gap-3">
+                    <div className="flex-1 px-2 font-medium text-lg truncate">{item.name}</div>
+                    {deletingId === item.id ? (
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleDelete(item.id)}
+                          className="w-[60px] h-[60px] flex-none flex items-center justify-center text-white bg-red-600 rounded-lg font-bold text-sm"
+                        >
+                          刪除
                         </button>
-                        <button onClick={() => setEditingId(null)} className="w-[60px] h-[60px] flex-none flex items-center justify-center bg-zinc-800 text-zinc-300 rounded-lg">
-                          <X size={24} />
+                        <button
+                          onClick={() => setDeletingId(null)}
+                          className="w-[60px] h-[60px] flex-none flex items-center justify-center text-zinc-300 bg-zinc-800 rounded-lg font-bold text-sm"
+                        >
+                          取消
                         </button>
                       </div>
-                    </>
-                  ) : (
-                    <div className="flex items-center gap-3">
-                      <div className="flex-1 px-2 font-medium text-lg truncate">{item.name}</div>
+                    ) : (
                       <button
-                        onClick={() => { setEditingId(item.id); setEditName(item.name); setEditCategory(item.category); }}
+                        onClick={() => setActiveMenuId(item.id)}
                         className="w-[60px] h-[60px] flex-none flex items-center justify-center text-zinc-400 hover:text-amber-500 bg-zinc-950 rounded-lg"
                       >
-                        <Edit2 size={20} />
+                        <MoreVertical size={20} />
                       </button>
-                      {deletingId === item.id ? (
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => handleDelete(item.id)}
-                            className="w-[60px] h-[60px] flex-none flex items-center justify-center text-white bg-red-600 rounded-lg font-bold text-sm"
-                          >
-                            刪除
-                          </button>
-                          <button
-                            onClick={() => setDeletingId(null)}
-                            className="w-[60px] h-[60px] flex-none flex items-center justify-center text-zinc-300 bg-zinc-800 rounded-lg font-bold text-sm"
-                          >
-                            取消
-                          </button>
-                        </div>
-                      ) : (
-                        <button
-                          onClick={() => setDeletingId(item.id)}
-                          className="w-[60px] h-[60px] flex-none flex items-center justify-center text-zinc-400 hover:text-red-500 bg-zinc-950 rounded-lg"
-                        >
-                          <Trash2 size={20} />
-                        </button>
-                      )}
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
           </div>
         );
       })}
+
+      {/* 底部抽屜 (Bottom Sheet) */}
+      {activeMenuId && (
+        <div 
+          className="fixed inset-0 bg-black/60 z-50 flex flex-col justify-end"
+          onClick={() => setActiveMenuId(null)}
+        >
+          <div 
+            className="bg-zinc-900 w-full rounded-t-2xl p-4 pb-8 animate-in slide-in-from-bottom-full duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="w-12 h-1.5 bg-zinc-700 rounded-full mx-auto mb-6" />
+            <div className="space-y-3">
+              <button
+                onClick={() => {
+                  const itemToEdit = items.find(i => i.id === activeMenuId);
+                  if (itemToEdit) {
+                    setEditingId(activeMenuId);
+                    setEditName(itemToEdit.name);
+                    setEditCategory(itemToEdit.category);
+                  }
+                  setActiveMenuId(null);
+                }}
+                className="w-full h-[60px] flex items-center gap-3 px-4 bg-zinc-800/50 hover:bg-zinc-800 rounded-xl text-zinc-200 transition-colors"
+              >
+                <Edit2 size={20} className="text-amber-500" />
+                <span className="font-bold text-lg">編輯項目名稱</span>
+              </button>
+              <button
+                onClick={() => {
+                  setDeletingId(activeMenuId);
+                  setActiveMenuId(null);
+                }}
+                className="w-full h-[60px] flex items-center gap-3 px-4 bg-red-500/10 hover:bg-red-500/20 rounded-xl text-red-500 transition-colors"
+              >
+                <Trash2 size={20} />
+                <span className="font-bold text-lg">刪除項目</span>
+              </button>
+              <button
+                onClick={() => setActiveMenuId(null)}
+                className="w-full h-[60px] flex items-center justify-center bg-zinc-800 rounded-xl text-zinc-300 font-bold text-lg mt-4"
+              >
+                取消
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 項目表單抽屜 (Bottom Sheet) */}
+      {(isAdding || editingId) && (
+        <div 
+          className="fixed inset-0 bg-black/60 z-50 flex flex-col justify-end"
+          onClick={() => {
+            setIsAdding(false);
+            setEditingId(null);
+          }}
+        >
+          <div 
+            className="bg-zinc-900 w-full rounded-t-2xl p-5 animate-in slide-in-from-bottom-full duration-200 max-h-[90vh] overflow-y-auto flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="w-12 h-1.5 bg-zinc-700 rounded-full mx-auto mb-6 flex-none" />
+            <h3 className="text-xl font-bold text-zinc-100 mb-6">
+              {isAdding ? '新增項目' : '編輯項目'}
+            </h3>
+            
+            <div className="space-y-4 flex-1">
+              <div>
+                <label className="block text-sm font-medium text-zinc-400 mb-2">項目分類</label>
+                <select
+                  value={isAdding ? newItemCategory : editCategory}
+                  onChange={(e) => isAdding ? setNewItemCategory(e.target.value) : setEditCategory(e.target.value)}
+                  className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 h-[60px] text-lg text-zinc-100 focus:outline-none focus:border-amber-500 appearance-none"
+                >
+                  <option value="定期維護">定期維護</option>
+                  <option value="設備維修">設備維修</option>
+                  <option value="更新配件">更新配件</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-zinc-400 mb-2">項目名稱</label>
+                <input
+                  type="text"
+                  value={isAdding ? newName : editName}
+                  onChange={(e) => isAdding ? setNewName(e.target.value) : setEditName(e.target.value)}
+                  placeholder="輸入項目名稱"
+                  className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 h-[60px] text-lg text-zinc-100 focus:outline-none focus:border-amber-500"
+                  autoFocus
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-8 flex-none">
+              <button
+                onClick={() => {
+                  setIsAdding(false);
+                  setEditingId(null);
+                }}
+                className="flex-1 h-[60px] bg-zinc-800 text-zinc-300 rounded-xl font-bold text-lg transition-colors hover:bg-zinc-700"
+              >
+                取消
+              </button>
+              <button
+                onClick={() => {
+                  if (isAdding) {
+                    handleAdd();
+                  } else if (editingId) {
+                    handleUpdate(editingId);
+                  }
+                }}
+                className="flex-1 h-[60px] bg-amber-500 text-zinc-950 rounded-xl font-bold text-lg transition-colors hover:bg-amber-400"
+              >
+                確認{isAdding ? '新增' : '儲存'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

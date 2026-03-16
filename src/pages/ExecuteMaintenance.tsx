@@ -13,13 +13,15 @@ const defaultState = {
   category: '',
   selectedItemIds: [] as string[],
   cost: '',
+  vendorName: '',
+  vendorPhone: '',
   notes: '',
   beforePhotoBase64: null as string | null,
   afterPhotoBase64: null as string | null,
 };
 
 export default function ExecuteMaintenance() {
-  const { equipment: equipmentList, items: itemList, loadingEquipment, loadingItems, refreshData } = useData();
+  const { equipment: equipmentList, items: itemList, history, loadingEquipment, loadingItems, refreshData } = useData();
   const [state, setState] = useState(defaultState);
   const [isCategoryOpen, setIsCategoryOpen] = useState(false);
 
@@ -95,6 +97,8 @@ export default function ExecuteMaintenance() {
       itemIds: state.selectedItemIds,
       itemName: itemNames,
       cost: parseInt(state.cost) || 0,
+      vendorName: state.vendorName,
+      vendorPhone: state.vendorPhone,
       timeSpent: 0,
       notes: state.notes,
       beforePhotoBase64: state.beforePhotoBase64 || undefined,
@@ -119,6 +123,11 @@ export default function ExecuteMaintenance() {
         console.error(err);
       });
   };
+
+  // 萃取不重複的廠商名稱
+  const uniqueVendors = Array.from(
+    new Set(history.map(r => r.vendorName).filter(Boolean))
+  ) as string[];
 
   if (loadingEquipment || loadingItems) return <div className="flex items-center justify-center h-full"><Loader2 className="animate-spin text-amber-500" size={32} /></div>;
 
@@ -251,6 +260,37 @@ export default function ExecuteMaintenance() {
               className="w-full h-[60px] bg-zinc-900 border border-zinc-800 rounded-xl pl-8 pr-4 text-lg text-zinc-100 focus:outline-none focus:border-amber-500"
             />
           </div>
+        </div>
+
+        {/* Vendor Name (廠商名稱) */}
+        <div className="space-y-2">
+          <label className="text-sm font-bold text-zinc-400 uppercase tracking-wider">廠商名稱</label>
+          <input
+            type="text"
+            list="vendor-list"
+            value={state.vendorName}
+            onChange={e => updateState({ vendorName: e.target.value })}
+            placeholder="例如：王老闆水電行"
+            className="w-full h-[60px] bg-zinc-900 border border-zinc-800 rounded-xl px-4 text-lg text-zinc-100 focus:outline-none focus:border-amber-500"
+          />
+          {/* 建立 datalist */}
+          <datalist id="vendor-list">
+            {uniqueVendors.map((vendor, index) => (
+              <option key={index} value={vendor} />
+            ))}
+          </datalist>
+        </div>
+
+        {/* Vendor Phone (廠商電話) */}
+        <div className="space-y-2">
+          <label className="text-sm font-bold text-zinc-400 uppercase tracking-wider">廠商電話</label>
+          <input
+            type="tel"
+            value={state.vendorPhone}
+            onChange={e => updateState({ vendorPhone: e.target.value })}
+            placeholder="例如：0912-345-678"
+            className="w-full h-[60px] bg-zinc-900 border border-zinc-800 rounded-xl px-4 text-lg text-zinc-100 focus:outline-none focus:border-amber-500"
+          />
         </div>
 
         {/* Notes */}

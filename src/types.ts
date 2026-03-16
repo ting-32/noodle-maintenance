@@ -22,6 +22,8 @@ export interface MaintenanceRecord {
   notes: string;
   beforePhotoUrl?: string;
   afterPhotoUrl?: string;
+  vendorName?: string;
+  vendorPhone?: string;
 }
 
 export interface AddLogPayload {
@@ -30,6 +32,8 @@ export interface AddLogPayload {
   category: string;
   vendor?: string;
   phone?: string;
+  vendorName?: string;
+  vendorPhone?: string;
   itemIds: string[];
   itemName: string;
   cost: number;
