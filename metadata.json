@@ -1,0 +1,5 @@
+{
+  "name": "麵廠維修紀錄系統",
+  "description": "專為手機單手操作設計的麵廠設備維修紀錄 App，包含設備管理、維修紀錄與歷史查詢。",
+  "requestFramePermissions": []
+}
