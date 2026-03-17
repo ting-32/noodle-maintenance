@@ -24,6 +24,7 @@ export default function ExecuteMaintenance() {
   const { equipment: equipmentList, items: itemList, history, loadingEquipment, loadingItems, refreshData } = useData();
   const [state, setState] = useState(defaultState);
   const [isCategoryOpen, setIsCategoryOpen] = useState(false);
+  const [isVendorExpanded, setIsVendorExpanded] = useState(false);
 
   useEffect(() => {
     // Load draft
@@ -32,6 +33,9 @@ export default function ExecuteMaintenance() {
       try {
         const parsed = JSON.parse(draft);
         setState(parsed);
+        if (parsed.vendorName || parsed.vendorPhone || parsed.notes) {
+          setIsVendorExpanded(true);
+        }
       } catch (e) {
         console.error('Failed to parse draft', e);
       }
@@ -132,186 +136,223 @@ export default function ExecuteMaintenance() {
   if (loadingEquipment || loadingItems) return <div className="flex items-center justify-center h-full"><Loader2 className="animate-spin text-amber-500" size={32} /></div>;
 
   return (
-    <div className="p-4 space-y-6 pb-8">
+    <div className="p-4 space-y-6 pb-32">
       {/* Form Section */}
-      <div className="space-y-5">
-        {/* Equipment */}
-        <div className="space-y-2">
-          <label className="text-sm font-bold text-zinc-400 uppercase tracking-wider">設備名稱</label>
-          <select
-            value={state.equipmentId}
-            onChange={e => updateState({ equipmentId: e.target.value })}
-            className="w-full h-[60px] bg-zinc-900 border border-zinc-800 rounded-xl px-4 text-lg text-zinc-100 focus:outline-none focus:border-amber-500 appearance-none"
-          >
-            <option value="" disabled>請選擇設備...</option>
-            {equipmentList.map(eq => (
-              <option key={eq.id} value={eq.id}>{eq.name}</option>
-            ))}
-          </select>
-        </div>
+      <div className="space-y-6">
+        {/* Card 1: 基本資訊 */}
+        <div className="bg-zinc-900/40 rounded-2xl p-5 space-y-5 border border-zinc-800/50">
+          <h3 className="text-zinc-100 font-bold text-lg mb-2 flex items-center gap-2">
+            <span className="w-1 h-5 bg-amber-500 rounded-full"></span>
+            基本資訊
+          </h3>
+          {/* Equipment */}
+          <div className="space-y-2">
+            <label className="text-sm font-bold text-zinc-400 uppercase tracking-wider">設備名稱</label>
+            <select
+              value={state.equipmentId}
+              onChange={e => updateState({ equipmentId: e.target.value })}
+              className="w-full h-[60px] bg-zinc-950 border border-zinc-800 rounded-xl px-4 text-lg text-zinc-100 focus:outline-none focus:border-amber-500 appearance-none"
+            >
+              <option value="" disabled>請選擇設備...</option>
+              {equipmentList.map(eq => (
+                <option key={eq.id} value={eq.id}>{eq.name}</option>
+              ))}
+            </select>
+          </div>
 
-        {/* Category */}
-        <div className="space-y-2">
-          <label className="text-sm font-bold text-zinc-400 uppercase tracking-wider">維修類別</label>
-          <button
-            onClick={() => setIsCategoryOpen(true)}
-            className="w-full h-[60px] bg-zinc-900 border border-zinc-800 rounded-xl px-4 text-lg text-left flex items-center justify-between focus:outline-none focus:border-amber-500"
-          >
-            <span className={state.category ? 'text-zinc-100' : 'text-zinc-500'}>
-              {state.category ? state.category : '請選擇維修類別'}
-            </span>
-            <ChevronDown className="text-zinc-500" size={20} />
-          </button>
-        </div>
+          {/* Category */}
+          <div className="space-y-2">
+            <label className="text-sm font-bold text-zinc-400 uppercase tracking-wider">維修類別</label>
+            <button
+              onClick={() => setIsCategoryOpen(true)}
+              className="w-full h-[60px] bg-zinc-950 border border-zinc-800 rounded-xl px-4 text-lg text-left flex items-center justify-between focus:outline-none focus:border-amber-500"
+            >
+              <span className={state.category ? 'text-zinc-100' : 'text-zinc-500'}>
+                {state.category ? state.category : '請選擇維修類別'}
+              </span>
+              <ChevronDown className="text-zinc-500" size={20} />
+            </button>
+          </div>
 
-        {/* Items (Pills) */}
-        <div className="space-y-2">
-          <label className="text-sm font-bold text-zinc-400 uppercase tracking-wider">維修項目 (可多選)</label>
-          <div className="flex flex-wrap gap-2">
-            {itemList
-              .filter(item => {
-                // 1. 根據選擇的設備過濾專屬項目
-                if (state.equipmentId) {
-                  const selectedEquipment = equipmentList.find(eq => eq.id === state.equipmentId);
-                  if (selectedEquipment && selectedEquipment.itemIds && selectedEquipment.itemIds.length > 0) {
-                    if (!selectedEquipment.itemIds.includes(item.id)) {
-                      return false;
+          {/* Items (Pills) */}
+          <div className="space-y-2">
+            <label className="text-sm font-bold text-zinc-400 uppercase tracking-wider">維修項目 (可多選)</label>
+            <div className="flex flex-wrap gap-2">
+              {itemList
+                .filter(item => {
+                  // 1. 根據選擇的設備過濾專屬項目
+                  if (state.equipmentId) {
+                    const selectedEquipment = equipmentList.find(eq => eq.id === state.equipmentId);
+                    if (selectedEquipment && selectedEquipment.itemIds && selectedEquipment.itemIds.length > 0) {
+                      if (!selectedEquipment.itemIds.includes(item.id)) {
+                        return false;
+                      }
                     }
                   }
-                }
-                // 2. 根據類別過濾
-                if (state.category) {
-                  return item.category === state.category;
-                }
-                return true;
-              })
-              .map(item => {
-              const isSelected = state.selectedItemIds.includes(item.id);
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => toggleItem(item.id)}
-                  className={`min-h-[48px] px-5 rounded-full text-sm font-bold transition-colors border ${
-                    isSelected 
-                      ? 'bg-amber-500 text-zinc-950 border-amber-500' 
-                      : 'bg-zinc-900 text-zinc-300 border-zinc-800 hover:border-zinc-600'
-                  }`}
-                >
-                  {item.name}
-                </button>
-              );
-            })}
+                  // 2. 根據類別過濾
+                  if (state.category) {
+                    return item.category === state.category;
+                  }
+                  return true;
+                })
+                .map(item => {
+                const isSelected = state.selectedItemIds.includes(item.id);
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => toggleItem(item.id)}
+                    className={`min-h-[48px] px-5 rounded-full text-sm font-bold transition-colors border ${
+                      isSelected 
+                        ? 'bg-amber-500 text-zinc-950 border-amber-500' 
+                        : 'bg-zinc-950 text-zinc-300 border-zinc-800 hover:border-zinc-600'
+                    }`}
+                  >
+                    {item.name}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
 
-        {/* Photos */}
-        <div className="grid grid-cols-2 gap-4">
-          {/* Before Photo */}
+        {/* Card 2: 維修細節 */}
+        <div className="bg-zinc-900/40 rounded-2xl p-5 space-y-5 border border-zinc-800/50">
+          <h3 className="text-zinc-100 font-bold text-lg mb-2 flex items-center gap-2">
+            <span className="w-1 h-5 bg-emerald-500 rounded-full"></span>
+            維修細節
+          </h3>
+          {/* Photos */}
+          <div className="grid grid-cols-2 gap-4">
+            {/* Before Photo */}
+            <div className="space-y-2">
+              <label className="text-sm font-bold text-zinc-400 uppercase tracking-wider">維修前</label>
+              {state.beforePhotoBase64 ? (
+                <div className="relative aspect-square rounded-xl overflow-hidden border border-zinc-800">
+                  <img src={state.beforePhotoBase64} alt="Before" className="w-full h-full object-cover" />
+                  <button onClick={() => removePhoto('before')} className="absolute top-2 right-2 w-8 h-8 bg-black/60 rounded-full flex items-center justify-center text-white">
+                    <X size={16} />
+                  </button>
+                </div>
+              ) : (
+                <label className="flex flex-col items-center justify-center aspect-square bg-zinc-950 border-2 border-dashed border-zinc-800 rounded-xl cursor-pointer hover:border-amber-500/50 transition-colors text-zinc-500 hover:text-amber-500">
+                  <Camera size={32} className="mb-2" />
+                  <span className="text-sm font-bold">拍攝照片</span>
+                  <input type="file" accept="image/*" capture="environment" className="hidden" onChange={e => handlePhotoUpload(e, 'before')} />
+                </label>
+              )}
+            </div>
+
+            {/* After Photo */}
+            <div className="space-y-2">
+              <label className="text-sm font-bold text-zinc-400 uppercase tracking-wider">維修後</label>
+              {state.afterPhotoBase64 ? (
+                <div className="relative aspect-square rounded-xl overflow-hidden border border-zinc-800">
+                  <img src={state.afterPhotoBase64} alt="After" className="w-full h-full object-cover" />
+                  <button onClick={() => removePhoto('after')} className="absolute top-2 right-2 w-8 h-8 bg-black/60 rounded-full flex items-center justify-center text-white">
+                    <X size={16} />
+                  </button>
+                </div>
+              ) : (
+                <label className="flex flex-col items-center justify-center aspect-square bg-zinc-950 border-2 border-dashed border-zinc-800 rounded-xl cursor-pointer hover:border-amber-500/50 transition-colors text-zinc-500 hover:text-amber-500">
+                  <Camera size={32} className="mb-2" />
+                  <span className="text-sm font-bold">拍攝照片</span>
+                  <input type="file" accept="image/*" capture="environment" className="hidden" onChange={e => handlePhotoUpload(e, 'after')} />
+                </label>
+              )}
+            </div>
+          </div>
+
+          {/* Cost */}
           <div className="space-y-2">
-            <label className="text-sm font-bold text-zinc-400 uppercase tracking-wider">維修前</label>
-            {state.beforePhotoBase64 ? (
-              <div className="relative aspect-square rounded-xl overflow-hidden border border-zinc-800">
-                <img src={state.beforePhotoBase64} alt="Before" className="w-full h-full object-cover" />
-                <button onClick={() => removePhoto('before')} className="absolute top-2 right-2 w-8 h-8 bg-black/60 rounded-full flex items-center justify-center text-white">
-                  <X size={16} />
-                </button>
+            <label className="text-sm font-bold text-zinc-400 uppercase tracking-wider">維修金額</label>
+            <div className="relative">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 font-bold">$</span>
+              <input
+                type="number"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                value={state.cost}
+                onChange={e => updateState({ cost: e.target.value })}
+                placeholder="0"
+                className="w-full h-[60px] bg-zinc-950 border border-zinc-800 rounded-xl pl-8 pr-4 text-lg text-zinc-100 focus:outline-none focus:border-amber-500"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Card 3: 外部廠商與備註 */}
+        <div className="bg-zinc-900/40 rounded-2xl p-5 border border-zinc-800/50">
+          <button 
+            onClick={() => setIsVendorExpanded(!isVendorExpanded)}
+            className="w-full flex items-center justify-between text-left focus:outline-none"
+          >
+            <div className="flex items-center gap-2">
+              <span className="w-1 h-5 bg-blue-500 rounded-full"></span>
+              <h3 className="text-zinc-100 font-bold text-lg">外部廠商與備註</h3>
+            </div>
+            <div className={`text-zinc-500 transition-transform duration-300 ${isVendorExpanded ? 'rotate-180' : ''}`}>
+              <ChevronDown size={20} />
+            </div>
+          </button>
+
+          {/* 展開後的內容 */}
+          {isVendorExpanded && (
+            <div className="mt-5 space-y-5 animate-in slide-in-from-top-2 fade-in duration-200">
+              {/* Vendor Name (廠商名稱) */}
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-zinc-400 uppercase tracking-wider">廠商名稱</label>
+                <input
+                  type="text"
+                  list="vendor-list"
+                  value={state.vendorName}
+                  onChange={e => updateState({ vendorName: e.target.value })}
+                  placeholder="例如：王老闆水電行"
+                  className="w-full h-[60px] bg-zinc-950 border border-zinc-800 rounded-xl px-4 text-lg text-zinc-100 focus:outline-none focus:border-amber-500"
+                />
+                {/* 建立 datalist */}
+                <datalist id="vendor-list">
+                  {uniqueVendors.map((vendor, index) => (
+                    <option key={index} value={vendor} />
+                  ))}
+                </datalist>
               </div>
-            ) : (
-              <label className="flex flex-col items-center justify-center aspect-square bg-zinc-900 border-2 border-dashed border-zinc-800 rounded-xl cursor-pointer hover:border-amber-500/50 transition-colors text-zinc-500 hover:text-amber-500">
-                <Camera size={32} className="mb-2" />
-                <span className="text-sm font-bold">拍攝照片</span>
-                <input type="file" accept="image/*" capture="environment" className="hidden" onChange={e => handlePhotoUpload(e, 'before')} />
-              </label>
-            )}
-          </div>
 
-          {/* After Photo */}
-          <div className="space-y-2">
-            <label className="text-sm font-bold text-zinc-400 uppercase tracking-wider">維修後</label>
-            {state.afterPhotoBase64 ? (
-              <div className="relative aspect-square rounded-xl overflow-hidden border border-zinc-800">
-                <img src={state.afterPhotoBase64} alt="After" className="w-full h-full object-cover" />
-                <button onClick={() => removePhoto('after')} className="absolute top-2 right-2 w-8 h-8 bg-black/60 rounded-full flex items-center justify-center text-white">
-                  <X size={16} />
-                </button>
+              {/* Vendor Phone (廠商電話) */}
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-zinc-400 uppercase tracking-wider">廠商電話</label>
+                <input
+                  type="tel"
+                  value={state.vendorPhone}
+                  onChange={e => updateState({ vendorPhone: e.target.value })}
+                  placeholder="例如：0912-345-678"
+                  className="w-full h-[60px] bg-zinc-950 border border-zinc-800 rounded-xl px-4 text-lg text-zinc-100 focus:outline-none focus:border-amber-500"
+                />
               </div>
-            ) : (
-              <label className="flex flex-col items-center justify-center aspect-square bg-zinc-900 border-2 border-dashed border-zinc-800 rounded-xl cursor-pointer hover:border-amber-500/50 transition-colors text-zinc-500 hover:text-amber-500">
-                <Camera size={32} className="mb-2" />
-                <span className="text-sm font-bold">拍攝照片</span>
-                <input type="file" accept="image/*" capture="environment" className="hidden" onChange={e => handlePhotoUpload(e, 'after')} />
-              </label>
-            )}
-          </div>
+
+              {/* Notes */}
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-zinc-400 uppercase tracking-wider">備註說明</label>
+                <textarea
+                  value={state.notes}
+                  onChange={e => updateState({ notes: e.target.value })}
+                  placeholder="請輸入詳細維修狀況..."
+                  className="w-full h-[120px] bg-zinc-950 border border-zinc-800 rounded-xl p-4 text-lg text-zinc-100 focus:outline-none focus:border-amber-500 resize-none"
+                />
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* Cost */}
-        <div className="space-y-2">
-          <label className="text-sm font-bold text-zinc-400 uppercase tracking-wider">維修金額</label>
-          <div className="relative">
-            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 font-bold">$</span>
-            <input
-              type="number"
-              inputMode="numeric"
-              pattern="[0-9]*"
-              value={state.cost}
-              onChange={e => updateState({ cost: e.target.value })}
-              placeholder="0"
-              className="w-full h-[60px] bg-zinc-900 border border-zinc-800 rounded-xl pl-8 pr-4 text-lg text-zinc-100 focus:outline-none focus:border-amber-500"
-            />
-          </div>
+        {/* Sticky Bottom Action Bar */}
+        <div className="fixed bottom-[72px] left-0 right-0 p-4 bg-gradient-to-t from-zinc-950 via-zinc-950/90 to-transparent z-40 pointer-events-none">
+          <button
+            onClick={handleSave}
+            className="w-full h-[60px] bg-emerald-600 text-white font-bold rounded-xl text-lg flex items-center justify-center gap-2 hover:bg-emerald-500 transition-colors shadow-lg shadow-emerald-900/20 pointer-events-auto backdrop-blur-sm"
+          >
+            <CheckCircle2 size={24} />
+            結束並記錄
+          </button>
         </div>
-
-        {/* Vendor Name (廠商名稱) */}
-        <div className="space-y-2">
-          <label className="text-sm font-bold text-zinc-400 uppercase tracking-wider">廠商名稱</label>
-          <input
-            type="text"
-            list="vendor-list"
-            value={state.vendorName}
-            onChange={e => updateState({ vendorName: e.target.value })}
-            placeholder="例如：王老闆水電行"
-            className="w-full h-[60px] bg-zinc-900 border border-zinc-800 rounded-xl px-4 text-lg text-zinc-100 focus:outline-none focus:border-amber-500"
-          />
-          {/* 建立 datalist */}
-          <datalist id="vendor-list">
-            {uniqueVendors.map((vendor, index) => (
-              <option key={index} value={vendor} />
-            ))}
-          </datalist>
-        </div>
-
-        {/* Vendor Phone (廠商電話) */}
-        <div className="space-y-2">
-          <label className="text-sm font-bold text-zinc-400 uppercase tracking-wider">廠商電話</label>
-          <input
-            type="tel"
-            value={state.vendorPhone}
-            onChange={e => updateState({ vendorPhone: e.target.value })}
-            placeholder="例如：0912-345-678"
-            className="w-full h-[60px] bg-zinc-900 border border-zinc-800 rounded-xl px-4 text-lg text-zinc-100 focus:outline-none focus:border-amber-500"
-          />
-        </div>
-
-        {/* Notes */}
-        <div className="space-y-2">
-          <label className="text-sm font-bold text-zinc-400 uppercase tracking-wider">備註說明</label>
-          <textarea
-            value={state.notes}
-            onChange={e => updateState({ notes: e.target.value })}
-            placeholder="請輸入詳細維修狀況..."
-            className="w-full h-[120px] bg-zinc-900 border border-zinc-800 rounded-xl p-4 text-lg text-zinc-100 focus:outline-none focus:border-amber-500 resize-none"
-          />
-        </div>
-
-        {/* Save Button */}
-        <button
-          onClick={handleSave}
-          className="w-full h-[60px] bg-emerald-600 text-white font-bold rounded-xl text-lg flex items-center justify-center gap-2 mt-8 hover:bg-emerald-500 transition-colors"
-        >
-          <CheckCircle2 size={24} />
-          結束並記錄
-        </button>
       </div>
 
       {/* Category Bottom Sheet */}

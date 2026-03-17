@@ -73,32 +73,52 @@ export default function History() {
           {/* Card Header (Always visible) */}
           <button
             onClick={() => setExpandedId(expandedId === record.id ? null : record.id)}
-            className="w-full min-h-[80px] p-4 flex items-center justify-between text-left focus:outline-none"
+            className="w-full p-4 flex items-center gap-3 text-left focus:outline-none"
           >
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-1 flex-wrap">
-                <span className="text-amber-500 font-bold text-lg">{record.equipmentName}</span>
-                {record.category && (
-                  <span className={`px-2 py-0.5 rounded text-xs font-bold ${
-                    record.category === '定期維護' ? 'bg-emerald-500/20 text-emerald-500' :
-                    record.category === '設備維修' ? 'bg-amber-500/20 text-amber-500' :
-                    record.category === '更新配件' ? 'bg-blue-500/20 text-blue-500' :
-                    'bg-zinc-800 text-zinc-400'
-                  }`}>
-                    {record.category}
-                  </span>
-                )}
-                <span className="text-zinc-500 text-sm">{record.date}</span>
+            {/* 左側 80%：純文字資訊區 */}
+            <div className="flex-1 min-w-0 space-y-1">
+              {/* 第一行：設備名稱 (移除原本在這裡的狀態 Icon) */}
+              <div className="flex items-center">
+                <span className="text-amber-500 font-bold text-lg truncate">
+                  {record.equipmentName}
+                </span>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-zinc-300">{record.itemName}</span>
-                {record.status === 'completed' && <CheckCircle2 size={16} className="text-emerald-500" />}
-                {record.status === 'issue' && <AlertTriangle size={16} className="text-red-500" />}
-                {record.status === 'pending' && <Clock size={16} className="text-amber-500" />}
+
+              {/* 第二行：日期、類別與項目 (保持不變) */}
+              <div className="flex items-center gap-2 text-sm">
+                <span className="text-zinc-500 flex-shrink-0">{record.date}</span>
+                <span className="w-px h-3 bg-zinc-700 flex-shrink-0"></span>
+                <div className="flex items-center gap-2 min-w-0 flex-1">
+                  {record.category && (
+                    <span className={`flex-shrink-0 px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                      record.category === '定期維護' ? 'bg-emerald-500/20 text-emerald-500' :
+                      record.category === '設備維修' ? 'bg-amber-500/20 text-amber-500' :
+                      record.category === '更新配件' ? 'bg-blue-500/20 text-blue-500' :
+                      'bg-zinc-800 text-zinc-400'
+                    }`}>
+                      {record.category}
+                    </span>
+                  )}
+                  <span className="text-zinc-400 truncate">
+                    {record.itemName}
+                  </span>
+                </div>
               </div>
             </div>
-            <div className="w-[40px] h-[40px] flex items-center justify-center bg-zinc-950 rounded-full text-zinc-400">
-              {expandedId === record.id ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+
+            {/* 右側 20%：狀態與操作熱區 (Unified Status & Action Zone) */}
+            <div className="flex-shrink-0 flex items-center gap-3 pl-3 border-l border-zinc-800/50">
+              {/* 狀態指示 Icon (稍微放大到 size={20} 以增加辨識度) */}
+              <div className="flex items-center justify-center">
+                {record.status === 'completed' && <CheckCircle2 size={20} className="text-emerald-500" />}
+                {record.status === 'issue' && <AlertTriangle size={20} className="text-red-500" />}
+                {record.status === 'pending' && <Clock size={20} className="text-amber-500" />}
+              </div>
+              
+              {/* 展開箭頭 */}
+              <div className="w-8 h-8 flex items-center justify-center bg-zinc-950 rounded-full text-zinc-400">
+                {expandedId === record.id ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+              </div>
             </div>
           </button>
 
