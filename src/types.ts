@@ -2,6 +2,13 @@ export interface Equipment {
   id: string;
   name: string;
   itemIds?: string[];
+  order?: number;
+}
+
+export interface MaintenanceCategory {
+  id: string;
+  name: string;
+  color?: string;
 }
 
 export interface MaintenanceItem {

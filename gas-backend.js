@@ -25,7 +25,18 @@ function setup() {
   var itemsSheet = ss.getSheetByName('ServiceItems');
   if (!itemsSheet) {
     itemsSheet = ss.insertSheet('ServiceItems');
-    itemsSheet.appendRow(['ID', '名稱']);
+    itemsSheet.appendRow(['ID', '名稱', '類別']);
+  }
+
+  // 建立 類別 表格
+  var catSheet = ss.getSheetByName('類別');
+  if (!catSheet) {
+    catSheet = ss.insertSheet('類別');
+    catSheet.appendRow(['ID', '名稱', '顏色']);
+    // 預設寫入三個基本類別
+    catSheet.appendRow([Utilities.getUuid(), '定期維護', '']);
+    catSheet.appendRow([Utilities.getUuid(), '設備維修', '']);
+    catSheet.appendRow([Utilities.getUuid(), '更新配件', '']);
   }
 }
 
@@ -40,7 +51,8 @@ function doGet(e) {
     var result = {
       equipment: getData('Equipments'),
       items: getData('ServiceItems'),
-      history: getData('Logs')
+      history: getData('Logs'),
+      categories: getData('類別')
     };
     // 必須長這樣，前端的 res.json() 才看得懂
     return ContentService.createTextOutput(JSON.stringify(result))
@@ -51,6 +63,8 @@ function doGet(e) {
     return jsonResponse(getData('ServiceItems'));
   } else if (action === 'getLogs') {
     return jsonResponse(getData('Logs'));
+  } else if (action === 'getCategories') {
+    return jsonResponse(getData('類別'));
   }
   
   return jsonResponse({ error: 'Invalid action parameter' });
@@ -87,6 +101,11 @@ function doPost(e) {
     if (action === 'addItem') return jsonResponse(addRow('ServiceItems', data.payload.name, data.payload.category));
     if (action === 'editItem') return jsonResponse(editRow('ServiceItems', data.payload.id, data.payload.name, data.payload.category));
     if (action === 'deleteItem') return jsonResponse(deleteRow('ServiceItems', data.payload.id));
+
+    // 功能 B: CRUD 管理 (類別)
+    if (action === 'addCategory') return jsonResponse(addRow('類別', data.payload.name, data.payload.color));
+    if (action === 'editCategory') return jsonResponse(editRow('類別', data.payload.id, data.payload.name, data.payload.color));
+    if (action === 'deleteCategory') return jsonResponse(deleteRow('類別', data.payload.id));
 
     return jsonResponse({ error: 'Invalid action' });
   } catch (err) {

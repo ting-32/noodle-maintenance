@@ -1,4 +1,4 @@
-import { Equipment, MaintenanceItem, MaintenanceRecord, AddLogPayload } from '../types';
+import { Equipment, MaintenanceItem, MaintenanceRecord, AddLogPayload, MaintenanceCategory } from '../types';
 
 const GAS_URL = (import.meta as any).env?.VITE_GAS_URL || '';
 
@@ -7,6 +7,12 @@ let equipmentList: Equipment[] = [
   { id: '1', name: '一號製麵機' },
   { id: '2', name: '二號包裝機' },
   { id: '3', name: '大型攪拌機' },
+];
+
+let categoryList: MaintenanceCategory[] = [
+  { id: '1', name: '定期維護' },
+  { id: '2', name: '設備維修' },
+  { id: '3', name: '更新配件' },
 ];
 
 let itemList: MaintenanceItem[] = [
@@ -105,13 +111,14 @@ const convertDriveUrl = (url: string | undefined | null) => {
 };
 
 export const api = {
-  getInitialData: async (): Promise<{ equipment: Equipment[], items: MaintenanceItem[], history: MaintenanceRecord[] }> => {
+  getInitialData: async (): Promise<{ equipment: Equipment[], items: MaintenanceItem[], history: MaintenanceRecord[], categories: MaintenanceCategory[] }> => {
     if (GAS_URL) {
       const data = await fetchGet('getInitialData');
       if (data) {
         return {
-          equipment: Array.isArray(data.equipment) ? data.equipment.map((d: any) => ({ id: d['ID'], name: d['名稱'], itemIds: d['關聯項目'] ? String(d['關聯項目']).split(',') : [] })) : [],
+          equipment: Array.isArray(data.equipment) ? data.equipment.map((d: any) => ({ id: d['ID'], name: d['名稱'], itemIds: d['關聯項目'] ? String(d['關聯項目']).split(',') : [], order: d['排序'] ? Number(d['排序']) : 0 })).sort((a, b) => (a.order || 0) - (b.order || 0)) : [],
           items: Array.isArray(data.items) ? data.items.map((d: any) => ({ id: d['ID'], name: d['名稱'], category: d['類別'] || '定期維護' })) : [],
+          categories: Array.isArray(data.categories) ? data.categories.map((d: any) => ({ id: d['ID'], name: d['名稱'], color: d['顏色'] })) : [],
           history: Array.isArray(data.history) ? data.history.map((d: any) => ({
             id: d['ID'],
             equipmentId: d['設備ID'] || '', 
@@ -132,8 +139,9 @@ export const api = {
     }
     await delay(300);
     return {
-      equipment: [...equipmentList],
+      equipment: [...equipmentList].sort((a, b) => (a.order || 0) - (b.order || 0)),
       items: [...itemList],
+      categories: [...categoryList],
       history: [...historyList]
     };
   },
@@ -141,19 +149,19 @@ export const api = {
     if (GAS_URL) {
       const data = await fetchGet('getEquipments');
       if (data && Array.isArray(data)) {
-        return data.map((d: any) => ({ id: d['ID'], name: d['名稱'], itemIds: d['關聯項目'] ? String(d['關聯項目']).split(',') : [] }));
+        return data.map((d: any) => ({ id: d['ID'], name: d['名稱'], itemIds: d['關聯項目'] ? String(d['關聯項目']).split(',') : [], order: d['排序'] ? Number(d['排序']) : 0 })).sort((a, b) => (a.order || 0) - (b.order || 0));
       }
     }
     await delay(300);
-    return [...equipmentList];
+    return [...equipmentList].sort((a, b) => (a.order || 0) - (b.order || 0));
   },
   addEquipment: async (name: string, itemIds: string[] = []): Promise<Equipment> => {
     if (GAS_URL) {
       const res = await fetchPost('addEquipment', { name, itemIds });
-      if (res?.success) return { id: res.id, name: res.name, itemIds };
+      if (res?.success) return { id: res.id, name: res.name, itemIds, order: res.order || 0 };
     }
     await delay(300);
-    const newEq = { id: Date.now().toString(), name, itemIds };
+    const newEq = { id: Date.now().toString(), name, itemIds, order: equipmentList.length };
     equipmentList.push(newEq);
     return newEq;
   },
@@ -168,6 +176,19 @@ export const api = {
       eq.name = name;
       eq.itemIds = itemIds;
     }
+  },
+  updateEquipmentOrder: async (orderedIds: string[]): Promise<void> => {
+    if (GAS_URL) {
+      await fetchPost('updateEquipmentOrder', { orderedIds });
+      return;
+    }
+    await delay(300);
+    orderedIds.forEach((id, index) => {
+      const eq = equipmentList.find(e => e.id === id);
+      if (eq) {
+        eq.order = index;
+      }
+    });
   },
   deleteEquipment: async (id: string): Promise<void> => {
     if (GAS_URL) {
@@ -217,6 +238,47 @@ export const api = {
     }
     await delay(300);
     itemList = itemList.filter(e => e.id !== id);
+  },
+
+  getCategories: async (): Promise<MaintenanceCategory[]> => {
+    if (GAS_URL) {
+      const data = await fetchGet('getCategories');
+      if (data && Array.isArray(data)) {
+        return data.map((d: any) => ({ id: d['ID'], name: d['名稱'], color: d['顏色'] }));
+      }
+    }
+    await delay(300);
+    return [...categoryList];
+  },
+  addCategory: async (name: string, color?: string): Promise<MaintenanceCategory> => {
+    if (GAS_URL) {
+      const res = await fetchPost('addCategory', { name, color });
+      if (res?.success) return { id: res.id, name: res.name, color };
+    }
+    await delay(300);
+    const newCategory = { id: Date.now().toString(), name, color };
+    categoryList.push(newCategory);
+    return newCategory;
+  },
+  updateCategory: async (id: string, name: string, color?: string): Promise<void> => {
+    if (GAS_URL) {
+      await fetchPost('editCategory', { id, name, color });
+      return;
+    }
+    await delay(300);
+    const cat = categoryList.find(e => e.id === id);
+    if (cat) {
+      cat.name = name;
+      cat.color = color;
+    }
+  },
+  deleteCategory: async (id: string): Promise<void> => {
+    if (GAS_URL) {
+      await fetchPost('deleteCategory', { id });
+      return;
+    }
+    await delay(300);
+    categoryList = categoryList.filter(e => e.id !== id);
   },
 
   getHistory: async (): Promise<MaintenanceRecord[]> => {

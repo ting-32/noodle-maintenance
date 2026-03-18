@@ -42,7 +42,7 @@ const compressImageToBase64 = (file: File): Promise<string> => {
 };
 
 export default function History() {
-  const { history: records, loadingHistory: loading, refreshData } = useData();
+  const { history: records, loadingHistory: loading, refreshData, categories } = useData();
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
   const [uploadingId, setUploadingId] = useState<string | null>(null);
@@ -89,16 +89,17 @@ export default function History() {
                 <span className="text-zinc-500 flex-shrink-0">{record.date}</span>
                 <span className="w-px h-3 bg-zinc-700 flex-shrink-0"></span>
                 <div className="flex items-center gap-2 min-w-0 flex-1">
-                  {record.category && (
-                    <span className={`flex-shrink-0 px-1.5 py-0.5 rounded text-[10px] font-bold ${
-                      record.category === '定期維護' ? 'bg-emerald-500/20 text-emerald-500' :
-                      record.category === '設備維修' ? 'bg-amber-500/20 text-amber-500' :
-                      record.category === '更新配件' ? 'bg-blue-500/20 text-blue-500' :
-                      'bg-zinc-800 text-zinc-400'
-                    }`}>
-                      {record.category}
-                    </span>
-                  )}
+                  {record.category && (() => {
+                    const cat = categories.find(c => c.name === record.category);
+                    const colorClass = cat?.color ? cat.color.replace('bg-', 'text-') : 'text-zinc-400';
+                    const bgClass = cat?.color ? cat.color.replace('bg-', 'bg-').concat('/20') : 'bg-zinc-800';
+                    
+                    return (
+                      <span className={`flex-shrink-0 px-1.5 py-0.5 rounded text-[10px] font-bold ${bgClass} ${colorClass}`}>
+                        {record.category}
+                      </span>
+                    );
+                  })()}
                   <span className="text-zinc-400 truncate">
                     {record.itemName}
                   </span>
@@ -125,9 +126,20 @@ export default function History() {
           {/* Expanded Content */}
           {expandedId === record.id && (
             <div className="p-4 border-t border-zinc-800 bg-zinc-950/50">
+              
+              {/* ▼ 新增：完整維護項目 (解決手機版截斷問題) ▼ */}
+              <div className="mb-4">
+                <h4 className="text-xs font-bold tracking-wider text-zinc-500 uppercase mb-2">維護項目</h4>
+                <p className="text-zinc-300 leading-relaxed break-words">
+                  {record.itemName}
+                </p>
+              </div>
+              {/* ▲ 新增結束 ▲ */}
+
+              {/* 原本的備註說明 */}
               <div className="mb-4">
                 <h4 className="text-xs font-bold tracking-wider text-zinc-500 uppercase mb-2">備註說明</h4>
-                <p className="text-zinc-300 leading-relaxed">{record.notes || '無備註'}</p>
+                <p className="text-zinc-300 leading-relaxed break-words">{record.notes || '無備註'}</p>
               </div>
 
               {(record.beforePhotoUrl || record.afterPhotoUrl || record.status !== 'completed') && (

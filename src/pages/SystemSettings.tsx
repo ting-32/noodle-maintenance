@@ -5,7 +5,7 @@ import { useData } from '../contexts/DataContext';
 import toast from 'react-hot-toast';
 
 export default function SystemSettings() {
-  const [activeTab, setActiveTab] = useState<'equipment' | 'items'>('equipment');
+  const [activeTab, setActiveTab] = useState<'equipment' | 'items' | 'categories'>('equipment');
 
   return (
     <div className="flex flex-col h-full">
@@ -27,17 +27,297 @@ export default function SystemSettings() {
         >
           項目管理
         </button>
+        <button
+          onClick={() => setActiveTab('categories')}
+          className={`flex-1 h-[60px] flex items-center justify-center text-sm font-bold tracking-wider transition-colors ${
+            activeTab === 'categories' ? 'text-amber-500 border-b-2 border-amber-500' : 'text-zinc-400'
+          }`}
+        >
+          類別管理
+        </button>
       </div>
 
       <div className="p-4 pb-24">
-        {activeTab === 'equipment' ? <EquipmentManager /> : <ItemManager />}
+        {activeTab === 'equipment' && <EquipmentManager />}
+        {activeTab === 'items' && <ItemManager />}
+        {activeTab === 'categories' && <CategoryManager />}
       </div>
     </div>
   );
 }
 
+function CategoryManager() {
+  const { categories, loadingCategories: loading, setCategories, items } = useData();
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editColor, setEditColor] = useState('');
+  const [isAdding, setIsAdding] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [newColor, setNewColor] = useState('');
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
+
+  const PASTEL_COLORS = [
+    'bg-red-500', 'bg-orange-500', 'bg-amber-500', 'bg-lime-500',
+    'bg-green-500', 'bg-emerald-500', 'bg-cyan-500', 'bg-blue-500',
+    'bg-indigo-500', 'bg-purple-500', 'bg-fuchsia-500', 'bg-pink-500'
+  ];
+
+  const handleAdd = () => {
+    if (!newName.trim()) return;
+    
+    const tempId = `temp-${Date.now()}`;
+    const tempCategory = { id: tempId, name: newName.trim(), color: newColor || PASTEL_COLORS[0] };
+    
+    setCategories(prev => [...prev, tempCategory]);
+    setNewName('');
+    setNewColor('');
+    setIsAdding(false);
+    
+    api.addCategory(newName.trim(), tempCategory.color)
+      .then((realData) => {
+        setCategories(prev => prev.map(cat => cat.id === tempId ? realData : cat));
+        toast.success('類別已新增');
+      })
+      .catch((err) => {
+        setCategories(prev => prev.filter(cat => cat.id !== tempId));
+        toast.error('新增失敗，請檢查網路');
+        console.error(err);
+      });
+  };
+
+  const handleUpdate = (id: string) => {
+    if (!editName.trim()) return;
+    
+    const previousCategories = [...categories];
+    
+    setCategories(prev => prev.map(cat => cat.id === id ? { ...cat, name: editName.trim(), color: editColor } : cat));
+    setEditingId(null);
+    
+    api.updateCategory(id, editName.trim(), editColor)
+      .then(() => {
+        toast.success('類別已更新');
+      })
+      .catch((err) => {
+        setCategories(previousCategories);
+        toast.error('更新失敗');
+        console.error(err);
+      });
+  };
+
+  const handleDelete = (id: string) => {
+    // 防呆機制：檢查是否被項目使用中
+    const categoryToDelete = categories.find(c => c.id === id);
+    if (!categoryToDelete) return;
+    
+    const isUsed = items.some(item => item.category === categoryToDelete.name);
+    if (isUsed) {
+      toast.error('此類別下尚有維護項目，請先轉移後再刪除');
+      setDeletingId(null);
+      return;
+    }
+
+    const previousCategories = [...categories];
+    
+    setCategories(prev => prev.filter(cat => cat.id !== id));
+    setDeletingId(null);
+    
+    api.deleteCategory(id)
+      .then(() => {
+        toast.success('類別已刪除');
+      })
+      .catch((err) => {
+        setCategories(previousCategories);
+        toast.error('刪除失敗');
+        console.error(err);
+      });
+  };
+
+  if (loading) return <div className="text-center py-8 text-zinc-500">載入中...</div>;
+
+  return (
+    <div className="space-y-3">
+      <button
+        onClick={() => {
+          setNewName('');
+          setNewColor(PASTEL_COLORS[0]);
+          setIsAdding(true);
+        }}
+        className="w-full h-[60px] flex items-center justify-center gap-2 border-2 border-dashed border-zinc-700 rounded-xl text-zinc-400 hover:text-amber-500 hover:border-amber-500 transition-colors"
+      >
+        <Plus size={20} />
+        <span className="font-bold">新增類別</span>
+      </button>
+
+      {categories.length === 0 && (
+        <div className="text-center py-12 px-4">
+          <div className="w-16 h-16 bg-zinc-800 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Settings className="w-8 h-8 text-zinc-500" />
+          </div>
+          <h3 className="text-lg font-bold text-zinc-300 mb-2">尚無類別</h3>
+          <p className="text-sm text-zinc-500">點擊上方按鈕建立第一個類別</p>
+        </div>
+      )}
+
+      {categories.map(cat => (
+        <div key={cat.id} className="bg-zinc-900 p-3 rounded-xl border border-zinc-800 flex items-center gap-3">
+          <div className={`w-4 h-4 rounded-full flex-none ${cat.color || 'bg-zinc-500'}`} />
+          <div className="flex-1 px-2 font-medium text-lg truncate">{cat.name}</div>
+          {deletingId === cat.id ? (
+            <div className="flex gap-2">
+              <button
+                onClick={() => handleDelete(cat.id)}
+                className="w-[60px] h-[60px] flex-none flex items-center justify-center text-white bg-red-600 rounded-lg font-bold text-sm"
+              >
+                刪除
+              </button>
+              <button
+                onClick={() => setDeletingId(null)}
+                className="w-[60px] h-[60px] flex-none flex items-center justify-center text-zinc-300 bg-zinc-800 rounded-lg font-bold text-sm"
+              >
+                取消
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setActiveMenuId(cat.id)}
+              className="w-[60px] h-[60px] flex-none flex items-center justify-center text-zinc-400 hover:text-amber-500 bg-zinc-950 rounded-lg"
+            >
+              <MoreVertical size={20} />
+            </button>
+          )}
+        </div>
+      ))}
+
+      {/* 底部抽屜 (Bottom Sheet) */}
+      {activeMenuId && (
+        <div 
+          className="fixed inset-0 bg-black/60 z-50 flex flex-col justify-end"
+          onClick={() => setActiveMenuId(null)}
+        >
+          <div 
+            className="bg-zinc-900 w-full rounded-t-2xl p-4 pb-8 animate-in slide-in-from-bottom-full duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="w-12 h-1.5 bg-zinc-700 rounded-full mx-auto mb-6" />
+            <div className="space-y-3">
+              <button
+                onClick={() => {
+                  const catToEdit = categories.find(c => c.id === activeMenuId);
+                  if (catToEdit) {
+                    setEditingId(activeMenuId);
+                    setEditName(catToEdit.name);
+                    setEditColor(catToEdit.color || PASTEL_COLORS[0]);
+                  }
+                  setActiveMenuId(null);
+                }}
+                className="w-full h-[60px] flex items-center gap-3 px-4 bg-zinc-800/50 hover:bg-zinc-800 rounded-xl text-zinc-200 transition-colors"
+              >
+                <Edit2 size={20} className="text-amber-500" />
+                <span className="font-bold text-lg">編輯類別名稱</span>
+              </button>
+              <button
+                onClick={() => {
+                  setDeletingId(activeMenuId);
+                  setActiveMenuId(null);
+                }}
+                className="w-full h-[60px] flex items-center gap-3 px-4 bg-red-500/10 hover:bg-red-500/20 rounded-xl text-red-500 transition-colors"
+              >
+                <Trash2 size={20} />
+                <span className="font-bold text-lg">刪除類別</span>
+              </button>
+              <button
+                onClick={() => setActiveMenuId(null)}
+                className="w-full h-[60px] flex items-center justify-center bg-zinc-800 rounded-xl text-zinc-300 font-bold text-lg mt-4"
+              >
+                取消
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 類別表單抽屜 (Bottom Sheet) */}
+      {(isAdding || editingId) && (
+        <div 
+          className="fixed inset-0 bg-black/60 z-50 flex flex-col justify-end"
+          onClick={() => {
+            setIsAdding(false);
+            setEditingId(null);
+          }}
+        >
+          <div 
+            className="bg-zinc-900 w-full rounded-t-2xl p-5 animate-in slide-in-from-bottom-full duration-200 max-h-[90vh] overflow-y-auto flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="w-12 h-1.5 bg-zinc-700 rounded-full mx-auto mb-6 flex-none" />
+            <h3 className="text-xl font-bold text-zinc-100 mb-6">
+              {isAdding ? '新增類別' : '編輯類別'}
+            </h3>
+            
+            <div className="space-y-6 flex-1">
+              <div>
+                <label className="block text-sm font-medium text-zinc-400 mb-2">類別名稱</label>
+                <input
+                  type="text"
+                  value={isAdding ? newName : editName}
+                  onChange={(e) => isAdding ? setNewName(e.target.value) : setEditName(e.target.value)}
+                  placeholder="輸入類別名稱"
+                  className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 h-[60px] text-lg text-zinc-100 focus:outline-none focus:border-amber-500"
+                  autoFocus
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-zinc-400 mb-2">標籤顏色</label>
+                <div className="grid grid-cols-6 gap-3">
+                  {PASTEL_COLORS.map(color => (
+                    <button
+                      key={color}
+                      onClick={() => isAdding ? setNewColor(color) : setEditColor(color)}
+                      className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${color} ${
+                        (isAdding ? newColor : editColor) === color ? 'ring-2 ring-white ring-offset-2 ring-offset-zinc-900 scale-110' : 'opacity-70 hover:opacity-100'
+                      }`}
+                    >
+                      {(isAdding ? newColor : editColor) === color && <Check size={16} className="text-white drop-shadow-md" />}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-8 flex-none">
+              <button
+                onClick={() => {
+                  setIsAdding(false);
+                  setEditingId(null);
+                }}
+                className="flex-1 h-[60px] bg-zinc-800 text-zinc-300 rounded-xl font-bold text-lg transition-colors hover:bg-zinc-700"
+              >
+                取消
+              </button>
+              <button
+                onClick={() => {
+                  if (isAdding) {
+                    handleAdd();
+                  } else if (editingId) {
+                    handleUpdate(editingId);
+                  }
+                }}
+                className="flex-1 h-[60px] bg-amber-500 text-zinc-950 rounded-xl font-bold text-lg transition-colors hover:bg-amber-400"
+              >
+                確認{isAdding ? '新增' : '儲存'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function EquipmentManager() {
-  const { equipment, loadingEquipment: loading, setEquipment, items } = useData();
+  const { equipment, loadingEquipment: loading, setEquipment, items, categories } = useData();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
   const [isAdding, setIsAdding] = useState(false);
@@ -195,12 +475,12 @@ function EquipmentManager() {
               </button>
             </div>
             <div className="p-4 overflow-y-auto space-y-4 flex-1">
-              {['定期維護', '設備維修', '更新配件'].map(cat => {
-                const catItems = items.filter(item => item.category === cat);
+              {categories.map(cat => {
+                const catItems = items.filter(item => item.category === cat.name);
                 if (catItems.length === 0) return null;
                 return (
-                  <div key={cat}>
-                    <h4 className="text-amber-500 font-bold mb-2">{cat}</h4>
+                  <div key={cat.id}>
+                    <h4 className="text-amber-500 font-bold mb-2">{cat.name}</h4>
                     <div className="space-y-2">
                       {catItems.map(item => (
                         <label key={item.id} className="flex items-center gap-3 p-3 bg-zinc-950 rounded-xl border border-zinc-800 cursor-pointer">
@@ -343,28 +623,29 @@ function EquipmentManager() {
 }
 
 function ItemManager() {
-  const { items, loadingItems: loading, setItems } = useData();
+  const { items, loadingItems: loading, setItems, categories } = useData();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
-  const [editCategory, setEditCategory] = useState('定期維護');
+  const [editCategory, setEditCategory] = useState('');
   const [isAdding, setIsAdding] = useState(false);
   const [newName, setNewName] = useState('');
-  const [newItemCategory, setNewItemCategory] = useState('定期維護');
+  const [newItemCategory, setNewItemCategory] = useState('');
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
 
   const handleAdd = () => {
     if (!newName.trim()) return;
     
+    const categoryToUse = newItemCategory || (categories.length > 0 ? categories[0].name : '定期維護');
     const tempId = `temp-${Date.now()}`;
-    const tempItem = { id: tempId, name: newName.trim(), category: newItemCategory };
+    const tempItem = { id: tempId, name: newName.trim(), category: categoryToUse };
     
     setItems(prev => [...prev, tempItem]);
     setNewName('');
-    setNewItemCategory('定期維護');
+    setNewItemCategory('');
     setIsAdding(false);
     
-    api.addItem(newName.trim(), newItemCategory)
+    api.addItem(newName.trim(), categoryToUse)
       .then((realData) => {
         setItems(prev => prev.map(item => item.id === tempId ? realData : item));
         toast.success('項目已新增');
@@ -380,11 +661,12 @@ function ItemManager() {
     if (!editName.trim()) return;
     
     const previousItems = [...items];
+    const categoryToUse = editCategory || (categories.length > 0 ? categories[0].name : '定期維護');
     
-    setItems(prev => prev.map(item => item.id === id ? { ...item, name: editName.trim(), category: editCategory } : item));
+    setItems(prev => prev.map(item => item.id === id ? { ...item, name: editName.trim(), category: categoryToUse } : item));
     setEditingId(null);
     
-    api.updateItem(id, editName.trim(), editCategory)
+    api.updateItem(id, editName.trim(), categoryToUse)
       .then(() => {
         toast.success('項目已更新');
       })
@@ -419,7 +701,7 @@ function ItemManager() {
       <button
         onClick={() => {
           setNewName('');
-          setNewItemCategory('定期維護');
+          setNewItemCategory(categories.length > 0 ? categories[0].name : '定期維護');
           setIsAdding(true);
         }}
         className="w-full h-[60px] flex items-center justify-center gap-2 border-2 border-dashed border-zinc-700 rounded-xl text-zinc-400 hover:text-amber-500 hover:border-amber-500 transition-colors"
@@ -428,13 +710,13 @@ function ItemManager() {
         <span className="font-bold">新增項目</span>
       </button>
 
-      {['定期維護', '設備維修', '更新配件'].map(cat => {
-        const catItems = items.filter(item => item.category === cat);
+      {categories.map(cat => {
+        const catItems = items.filter(item => item.category === cat.name);
         if (catItems.length === 0) return null;
         
         return (
-          <div key={cat} className="mb-6">
-            <h4 className="text-amber-500 font-bold mt-4 mb-2">{cat}</h4>
+          <div key={cat.id} className="mb-6">
+            <h4 className="text-amber-500 font-bold mt-4 mb-2">{cat.name}</h4>
             <div className="space-y-3">
               {catItems.map(item => (
                 <div key={item.id} className="bg-zinc-900 p-3 rounded-xl border border-zinc-800 flex flex-col gap-3">
@@ -545,9 +827,9 @@ function ItemManager() {
                   onChange={(e) => isAdding ? setNewItemCategory(e.target.value) : setEditCategory(e.target.value)}
                   className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 h-[60px] text-lg text-zinc-100 focus:outline-none focus:border-amber-500 appearance-none"
                 >
-                  <option value="定期維護">定期維護</option>
-                  <option value="設備維修">設備維修</option>
-                  <option value="更新配件">更新配件</option>
+                  {categories.map(cat => (
+                    <option key={cat.id} value={cat.name}>{cat.name}</option>
+                  ))}
                 </select>
               </div>
               <div>

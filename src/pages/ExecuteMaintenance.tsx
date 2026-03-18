@@ -21,7 +21,7 @@ const defaultState = {
 };
 
 export default function ExecuteMaintenance() {
-  const { equipment: equipmentList, items: itemList, history, loadingEquipment, loadingItems, refreshData } = useData();
+  const { equipment: equipmentList, items: itemList, history, loadingEquipment, loadingItems, refreshData, categories } = useData();
   const [state, setState] = useState(defaultState);
   const [isCategoryOpen, setIsCategoryOpen] = useState(false);
   const [isVendorExpanded, setIsVendorExpanded] = useState(false);
@@ -29,18 +29,28 @@ export default function ExecuteMaintenance() {
   useEffect(() => {
     // Load draft
     const draft = localStorage.getItem(STORAGE_KEY);
+    let loadedState = null;
     if (draft) {
       try {
-        const parsed = JSON.parse(draft);
-        setState(parsed);
-        if (parsed.vendorName || parsed.vendorPhone || parsed.notes) {
+        loadedState = JSON.parse(draft);
+        setState(loadedState);
+        if (loadedState.vendorName || loadedState.vendorPhone || loadedState.notes) {
           setIsVendorExpanded(true);
         }
       } catch (e) {
         console.error('Failed to parse draft', e);
       }
     }
-  }, []);
+    
+    if (categories.length > 0) {
+      setState(prev => {
+        if (!prev.category) {
+          return { ...prev, category: categories[0].name };
+        }
+        return prev;
+      });
+    }
+  }, [categories]);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
@@ -167,9 +177,14 @@ export default function ExecuteMaintenance() {
               onClick={() => setIsCategoryOpen(true)}
               className="w-full h-[60px] bg-zinc-950 border border-zinc-800 rounded-xl px-4 text-lg text-left flex items-center justify-between focus:outline-none focus:border-amber-500"
             >
-              <span className={state.category ? 'text-zinc-100' : 'text-zinc-500'}>
-                {state.category ? state.category : '請選擇維修類別'}
-              </span>
+              <div className="flex items-center gap-3">
+                {state.category && (
+                  <div className={`w-3 h-3 rounded-full ${categories.find(c => c.name === state.category)?.color || 'bg-zinc-500'}`} />
+                )}
+                <span className={state.category ? 'text-zinc-100' : 'text-zinc-500'}>
+                  {state.category ? state.category : '請選擇維修類別'}
+                </span>
+              </div>
               <ChevronDown className="text-zinc-500" size={20} />
             </button>
           </div>
@@ -372,20 +387,21 @@ export default function ExecuteMaintenance() {
               </button>
             </div>
             <div className="space-y-3">
-              {['定期維護', '設備維修', '更新配件'].map(cat => (
+              {categories.map(cat => (
                 <button
-                  key={cat}
+                  key={cat.id}
                   onClick={() => {
-                    updateState({ category: cat });
+                    updateState({ category: cat.name });
                     setIsCategoryOpen(false);
                   }}
-                  className={`w-full h-[60px] rounded-xl font-bold text-lg transition-colors ${
-                    state.category === cat 
+                  className={`w-full h-[60px] rounded-xl font-bold text-lg transition-colors flex items-center justify-center gap-3 ${
+                    state.category === cat.name 
                       ? 'bg-amber-500 text-zinc-950' 
                       : 'bg-zinc-800 text-zinc-100 hover:bg-zinc-700'
                   }`}
                 >
-                  {cat}
+                  <div className={`w-3 h-3 rounded-full ${cat.color || 'bg-zinc-500'}`} />
+                  {cat.name}
                 </button>
               ))}
             </div>
