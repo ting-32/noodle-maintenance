@@ -164,7 +164,6 @@ export default function History() {
                           <input 
                             type="file" 
                             accept="image/*" 
-                            capture="environment" 
                             className="hidden" 
                             onChange={(e) => handlePhotoUpload(record.id, 'before', e)}
                             disabled={uploadingId === record.id}
@@ -202,7 +201,6 @@ export default function History() {
                           <input 
                             type="file" 
                             accept="image/*" 
-                            capture="environment" 
                             className="hidden" 
                             onChange={(e) => handlePhotoUpload(record.id, 'after', e)}
                             disabled={uploadingId === record.id}

@@ -252,7 +252,7 @@ export default function ExecuteMaintenance() {
                 <label className="flex flex-col items-center justify-center aspect-square bg-zinc-950 border-2 border-dashed border-zinc-800 rounded-xl cursor-pointer hover:border-amber-500/50 transition-colors text-zinc-500 hover:text-amber-500">
                   <Camera size={32} className="mb-2" />
                   <span className="text-sm font-bold">拍攝照片</span>
-                  <input type="file" accept="image/*" capture="environment" className="hidden" onChange={e => handlePhotoUpload(e, 'before')} />
+                  <input type="file" accept="image/*" className="hidden" onChange={e => handlePhotoUpload(e, 'before')} />
                 </label>
               )}
             </div>
@@ -271,7 +271,7 @@ export default function ExecuteMaintenance() {
                 <label className="flex flex-col items-center justify-center aspect-square bg-zinc-950 border-2 border-dashed border-zinc-800 rounded-xl cursor-pointer hover:border-amber-500/50 transition-colors text-zinc-500 hover:text-amber-500">
                   <Camera size={32} className="mb-2" />
                   <span className="text-sm font-bold">拍攝照片</span>
-                  <input type="file" accept="image/*" capture="environment" className="hidden" onChange={e => handlePhotoUpload(e, 'after')} />
+                  <input type="file" accept="image/*" className="hidden" onChange={e => handlePhotoUpload(e, 'after')} />
                 </label>
               )}
             </div>

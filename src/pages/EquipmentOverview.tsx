@@ -6,7 +6,7 @@ import toast from 'react-hot-toast';
 import { Equipment } from '../types';
 
 export default function EquipmentOverview() {
-  const { equipment: equipmentList, history, categories, loadingEquipment, loadingHistory, reorderEquipment } = useData();
+  const { equipment: equipmentList, history, categories, items, loadingEquipment, loadingHistory, reorderEquipment } = useData();
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [isReordering, setIsReordering] = useState(false);
   const [localOrder, setLocalOrder] = useState<Equipment[]>([]);
@@ -95,6 +95,13 @@ export default function EquipmentOverview() {
                 const eqRecords = history.filter(r => r.equipmentId === eq.id || r.equipmentName === eq.name);
                 const lastUpdated = eqRecords.length > 0 ? eqRecords[0]?.date.split(' ')[0] : null;
 
+                const boundItemCategories = (eq.itemIds || [])
+                  .map(itemId => items.find(i => i.id === itemId)?.category)
+                  .filter(Boolean) as string[];
+                const historyCategories = eqRecords.map(r => r.category);
+                const relevantCategoryNames = Array.from(new Set([...boundItemCategories, ...historyCategories]));
+                const relevantCategories = categories.filter(cat => relevantCategoryNames.includes(cat.name));
+
                 return (
                   <Draggable key={eq.id} draggableId={eq.id} index={index} isDragDisabled={!isReordering}>
                     {(provided, snapshot) => (
@@ -121,7 +128,7 @@ export default function EquipmentOverview() {
                             <div className="flex-1 flex flex-col gap-2 pr-4">
                               <span className="text-lg font-bold text-zinc-100">{eq.name}</span>
                               <div className="flex flex-wrap items-center gap-2 mt-1">
-                                {categories.map((cat, catIndex) => {
+                                {relevantCategories.map((cat, catIndex) => {
                                   const catRecords = eqRecords.filter(r => r.category === cat.name);
                                   if (catRecords.length === 0) return null;
                                   
@@ -152,10 +159,16 @@ export default function EquipmentOverview() {
 
                         {expandedId === eq.id && !isReordering && (
                           <>
-                            <div className="text-xs text-zinc-500 text-center py-2 bg-zinc-950/50 border-t border-zinc-800">👉 左右滑動查看不同分類</div>
-                            <div className="py-4 bg-zinc-950/50 flex overflow-x-auto snap-x snap-mandatory hide-scrollbar">
-                              {categories.map((cat, index) => {
-                                const catRecords = eqRecords.filter(r => r.category === cat.name);
+                            {relevantCategories.length === 0 ? (
+                              <div className="text-sm text-zinc-500 text-center py-8 bg-zinc-950/50 border-t border-zinc-800">
+                                💡 此設備尚未綁定任何維護項目且無歷史紀錄
+                              </div>
+                            ) : (
+                              <>
+                                <div className="text-xs text-zinc-500 text-center py-2 bg-zinc-950/50 border-t border-zinc-800">👉 左右滑動查看不同分類</div>
+                                <div className="py-4 bg-zinc-950/50 flex overflow-x-auto snap-x snap-mandatory hide-scrollbar">
+                                  {relevantCategories.map((cat, index) => {
+                                    const catRecords = eqRecords.filter(r => r.category === cat.name);
                                 
                                 const colorClass = cat.color ? cat.color.replace('bg-', 'text-') : 'text-zinc-400';
                                 const bgClass = cat.color || 'bg-zinc-500';
@@ -185,6 +198,8 @@ export default function EquipmentOverview() {
                                 );
                               })}
                             </div>
+                              </>
+                            )}
                           </>
                         )}
                       </div>
