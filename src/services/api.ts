@@ -131,8 +131,21 @@ export const api = {
             notes: d['備註'],
             beforePhotoUrl: convertDriveUrl(d['維修前照片URL']),
             afterPhotoUrl: convertDriveUrl(d['維修後照片URL']),
-            vendorName: d['廠商名稱'] || '',
-            vendorPhone: d['廠商電話'] || '',
+            vendorName: (() => {
+              const key = Object.keys(d).find(k => k.includes('廠商'));
+              return key ? (d[key] || '') : '';
+            })(),
+            vendorPhone: (() => {
+              const key = Object.keys(d).find(k => k.includes('電話'));
+              return key ? (d[key] || '') : '';
+            })(),
+            cost: (() => {
+              const key = Object.keys(d).find(k => k.includes('金額') || k.includes('花費') || k.toLowerCase().includes('cost'));
+              if (key && d[key] !== undefined && d[key] !== null) {
+                return parseInt(String(d[key]).replace(/\D/g, ''), 10) || 0;
+              }
+              return 0;
+            })(),
           })).reverse() : []
         };
       }
@@ -297,8 +310,21 @@ export const api = {
           notes: d['備註'],
           beforePhotoUrl: convertDriveUrl(d['維修前照片URL']),
           afterPhotoUrl: convertDriveUrl(d['維修後照片URL']),
-          vendorName: d['廠商名稱'] || '',
-          vendorPhone: d['廠商電話'] || '',
+          vendorName: (() => {
+            const key = Object.keys(d).find(k => k.includes('廠商'));
+            return key ? (d[key] || '') : '';
+          })(),
+          vendorPhone: (() => {
+            const key = Object.keys(d).find(k => k.includes('電話'));
+            return key ? (d[key] || '') : '';
+          })(),
+          cost: (() => {
+            const key = Object.keys(d).find(k => k.includes('金額') || k.includes('花費') || k.toLowerCase().includes('cost'));
+            if (key && d[key] !== undefined && d[key] !== null) {
+              return parseInt(String(d[key]).replace(/\D/g, ''), 10) || 0;
+            }
+            return 0;
+          })(),
         })).reverse();
       }
     }
@@ -326,6 +352,7 @@ export const api = {
       afterPhotoUrl: payload.afterPhotoBase64,
       vendorName: payload.vendorName,
       vendorPhone: payload.vendorPhone,
+      cost: payload.cost,
     };
     historyList.unshift(newRecord);
   },

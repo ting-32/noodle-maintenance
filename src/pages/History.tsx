@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronDown, ChevronUp, CheckCircle2, AlertTriangle, Clock, X, Camera, Loader2 } from 'lucide-react';
+import { ChevronDown, ChevronUp, CheckCircle2, AlertTriangle, Clock, X, Camera, Loader2, DollarSign, Building2, FileText, Search } from 'lucide-react';
 import { useData } from '../contexts/DataContext';
 import { api } from '../services/api';
 
@@ -47,6 +47,25 @@ export default function History() {
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
   const [uploadingId, setUploadingId] = useState<string | null>(null);
 
+  // 1. 新增搜尋關鍵字的狀態
+  const [searchTerm, setSearchTerm] = useState('');
+
+  // 2. 根據關鍵字過濾紀錄 (即時比對四個欄位)
+  const filteredRecords = records.filter(record => {
+    if (!searchTerm.trim()) return true; // 如果沒輸入，顯示全部
+    
+    const term = searchTerm.toLowerCase();
+    
+    // 確保欄位有值才進行 toLowerCase 比對，避免 null 報錯
+    const matchCategory = record.category?.toLowerCase().includes(term);
+    const matchItemName = record.itemName?.toLowerCase().includes(term);
+    const matchVendor = record.vendorName?.toLowerCase().includes(term);
+    const matchEquipment = record.equipmentName?.toLowerCase().includes(term);
+
+    // 只要其中一個欄位符合，就保留這筆資料
+    return matchCategory || matchItemName || matchVendor || matchEquipment;
+  });
+
   const handlePhotoUpload = async (recordId: string, photoType: 'before' | 'after', event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -68,7 +87,39 @@ export default function History() {
 
   return (
     <div className="p-4 space-y-4">
-      {records.map(record => (
+      {/* 搜尋列 UI (吸頂設計) */}
+      <div className="sticky top-0 z-10 bg-black/80 backdrop-blur-md pb-4 pt-2 -mx-4 px-4 mb-2">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" size={18} />
+          <input
+            type="text"
+            placeholder="搜尋設備、項目、分類或廠商..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full bg-zinc-900 border border-zinc-800 rounded-xl py-3 pl-10 pr-10 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all shadow-lg"
+          />
+          {/* 當有輸入文字時，顯示一鍵清除按鈕 */}
+          {searchTerm && (
+            <button
+              onClick={() => setSearchTerm('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white p-1"
+            >
+              <X size={16} />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* 如果搜尋不到結果，顯示友善提示 */}
+      {filteredRecords.length === 0 && (
+        <div className="text-center py-12 text-zinc-500">
+          <Search size={48} className="mx-auto mb-4 opacity-20" />
+          <p>找不到符合「{searchTerm}」的紀錄</p>
+        </div>
+      )}
+
+      {/* 將 records 改為 filteredRecords */}
+      {filteredRecords.map(record => (
         <div key={record.id} className="bg-zinc-900 rounded-xl border border-zinc-800 overflow-hidden">
           {/* Card Header (Always visible) */}
           <button
@@ -104,6 +155,21 @@ export default function History() {
                     {record.itemName}
                   </span>
                 </div>
+              </div>
+
+              {/* 第三行：微型標籤列 (Micro-Metadata Row) */}
+              <div className="flex items-center gap-3 mt-2 text-[11px] text-zinc-500">
+                <span className="flex items-center gap-1">
+                  <DollarSign size={12} /> NT$ {(record.cost || 0).toLocaleString()}
+                </span>
+                <span className="flex items-center gap-1">
+                  <Building2 size={12} /> {record.vendorName || '無廠商'}
+                </span>
+                {record.notes && (
+                  <span className="flex items-center gap-1">
+                    <FileText size={12} /> {record.notes.length > 10 ? record.notes.substring(0, 10) + '...' : record.notes}
+                  </span>
+                )}
               </div>
             </div>
 

@@ -31,6 +31,7 @@ export interface MaintenanceRecord {
   afterPhotoUrl?: string;
   vendorName?: string;
   vendorPhone?: string;
+  cost?: number;
 }
 
 export interface AddLogPayload {

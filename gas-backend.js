@@ -11,7 +11,7 @@ function setup() {
   var logsSheet = ss.getSheetByName('Logs');
   if (!logsSheet) {
     logsSheet = ss.insertSheet('Logs');
-    logsSheet.appendRow(['ID', '設備名稱', '類別', '廠商', '電話', '維修項目', '金額', '耗時(分)', '備註', '維修前照片URL', '維修後照片URL', '日期']);
+    logsSheet.appendRow(['ID', '設備名稱', '類別', '廠商名稱', '廠商電話', '維修項目', '維修金額', '耗時(分)', '備註', '維修前照片URL', '維修後照片URL', '日期']);
   }
 
   // 建立 Equipments 表格
@@ -136,7 +136,7 @@ function addLog(payload) {
     afterUrl = saveImageToDrive(payload.afterPhotoBase64, "after_" + id);
   }
 
-  // 欄位：ID, 設備名稱, 類別, 廠商, 電話, 維修項目, 金額, 耗時(分), 備註, 維修前照片URL, 維修後照片URL, 日期
+  // 欄位：ID, 設備名稱, 類別, 廠商名稱, 廠商電話, 維修項目, 維修金額, 耗時(分), 備註, 維修前照片URL, 維修後照片URL, 日期
   var rowData = [
     id,
     payload.equipmentName || '',
